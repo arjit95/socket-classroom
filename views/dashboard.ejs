@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>Dashboard - Classroom</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" type="text/css" media="screen" href="/static/css/dashboard.css">
+    <link rel="stylesheet" type="text/css" media="screen" href="/static/css/pace.css">
+
+    <script type="text/javascript" src="/static/js/pace.min.js"></script>
+
+    <!-- codemirror styles -->
+    <link rel="stylesheet" type="text/css" media="screen" href="/static/css/codemirror.css">
+    <link rel="stylesheet" type="text/css" media="screen" href="/static/css/show-hint.css">
+    <link rel="stylesheet" type="text/css" media="screen" href="/static/css/darcula.css">
+    
+</head>
+<body>
+    <div class="container">
+        <div class="left-sidebar">
+            <div class="joined-rooms">
+                <h4 class="room-heading">Joined</h4>
+                <ul class="list">
+                    <li><a href="#">User 1</a></li>
+                    <li><a href="#">User 2</a></li>
+                    <li><a href="#">User 3</a></li>
+                </ul>
+            </div>
+            <div class="available-rooms">
+                <h4 class="room-heading">Available</h4>
+                <ul class="list">
+                    <li><a href="#">User 1</a></li>
+                    <li><a href="#">User 2</a></li>
+                    <li><a href="#">User 3</a></li>
+                </ul>
+            </div>
+        </div>
+        <div class="main-container">
+<textarea id="code">
+/**
+ * Start by writing some code here..
+ * Any changes will be broadcasted to all connected users
+**/
+</textarea>
+        </div>
+        <div class="right-sidebar">
+            <div class="available-users">
+                <h4 class="room-heading logout"><a href="/api/users/logout">Logout</a></h4>
+
+                <h4 class="room-heading">Online</h4>
+                <ul class="list">
+                    <li><a href="#">User 1</a></li>
+                    <li><a href="#">User 2</a></li>
+                    <li><a href="#">User 3</a></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    <script type="text/javascript" src="/static/js/codemirror.js"></script>
+    <script type="text/javascript" src="/static/js/javascript.js"></script>
+    <script type="text/javascript" src="/static/js/show-hint.js"></script>
+    <script type="text/javascript" src="/static/js/javascript-hint.js"></script>
+    <script>
+        let editor = CodeMirror.fromTextArea(document.getElementById('code'), {
+            lineNumbers: true,
+            styleActiveLine: true,
+            matchBrackets: true,
+            theme: 'darcula',
+            mode: 'javascript',
+            lineWrapping: true,
+            extraKeys: {"Ctrl-Space": "autocomplete"},
+            pollInterval: 1000
+        });
+
+        editor.on('changes', function(a, b, c) {
+            a.getValue();
+        })
+    </script>
+</body>
+</html>

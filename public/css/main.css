@@ -1,0 +1,126 @@
+* {
+    margin: 0;
+    padding: 0;
+}
+
+html {
+    background: #dc2ccc;
+    background-image: linear-gradient(-30deg, #2c39dc, #662080);
+    background-size: cover;
+    background-repeat: no-repeat;
+    height: 100%;
+}
+
+.hide {
+    display: none !important;
+}
+
+.route-container,
+.create-container,
+.join-container {
+    position: relative;
+    width: 350px;
+    height: 400px;
+    margin: auto;
+    display: flex;
+    align-items: center;
+    background: #1d1d1d;
+}
+
+input:focus {
+    outline: none;
+}
+
+.create-container input[type='text'],
+.join-container input[type='text']{
+    border: 1px solid #584747;
+    font-family: Helvetica;
+    display: inline-block;
+    width: 79%;
+    height: 20px;
+    padding: 8px;
+    padding-right: 36px;
+    padding-left: 36px;
+    background-color: #3a3a3a;
+    color: #969596;
+}
+
+.create-container select,
+.join-container select {
+    width: 100%;
+    padding: 12px;
+    padding-left: 30px;
+    padding-right: 30px;
+    border: 1px solid #383838;
+    background-color: #3a3a3a;
+    color: #969596;
+    outline: none;
+}
+
+option {
+    background-color: #3a3a3a;
+    color: #ccc;
+}
+
+.container input[type='button'] {
+    width: 200px;
+    text-transform: uppercase;
+    border: 2px solid #dc1b3d;
+    border-radius: 12px;
+    padding: 8px;
+    display: block;
+    margin: auto;
+    
+    margin-top: 12px;
+    background: transparent;
+    color: #bbb;
+    font-weight: bold;
+}
+
+.container {
+    width: 100%;
+}
+
+.route-container {
+    height: 200px;
+}
+
+.route-container .container input[type='button']{
+    margin-top: 16px;
+}
+
+.route-container p,
+.join-container p ,
+.create-container p {
+    font-family: Helvetica;
+    color: #ccc;
+    font-size: 22px;
+    display: block;
+    text-align: left;
+    margin-left: 14px;
+    margin-bottom: 10px;
+}
+
+.content {
+    align-items: center;
+    display: flex;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+}
+
+body {
+    height: 100%;
+}
+
+.alert {
+    background: red;
+    color: white;
+    text-align: center;
+    width: 100%;
+    font-family: Arial;
+    padding-top: 12px;
+    padding-bottom: 12px;
+    top: 10%;
+    position: absolute;
+}

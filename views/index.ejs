@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Digital Classroom</title>
+	<link rel="stylesheet" href="/static/css/main.css" type="text/css"/>
+</head>
+<body>
+	<div class="content">
+		<div class="route-container">
+			<div class="container">
+				<p>Start with Classroom</p>
+				<input type="button" value="Create" class="route-btn" data-target="create-container"/>
+				<input type="button" value="Join" class="route-btn" data-target="join-container"/>
+			</div>
+		</div>
+
+        <form class="create-container hide">
+            <div class="container">
+                <div class="alert hide"></div>
+                <p>Create a new server</p>
+                <input type="text" name="username" placeholder="Username" required/>
+                <input type="text" name="serverName" placeholder="Server Name" required/>
+                <input type="button" value="Create"/>
+                <input type="button" value="Go Back" class="back-btn"/>
+            </div>
+        </form>
+
+        <form class="join-container join-form hide" action="/api/users/login">
+			<div class="container">
+                <div class="alert hide"></div>
+				<p>Login to classroom</p>
+				<input type="text" name="username" placeholder="Username" required/>
+				<input type="button" value="Join" onclick="joinBtnHandler(event)"/>
+				<input type="button" value="Go Back" class="back-btn"/>
+			</div>
+		</form>	
+	</div>
+
+    <script type="text/javascript" src="/static/js/jquery.min.js"></script>
+    <script type="text/javascript" src="/static/js/animator.js"></script>
+    <script type="text/javascript">
+        function addStepHandlers () {
+            let content = document.getElementsByClassName('content')[0];
+            let routeContainer = document.getElementsByClassName('route-container')[0];
+
+            content.onclick = function (e) {
+                if (e.target) {
+                    if (e.target.classList.contains('route-btn')) {
+                        let routeTarget = e.target.getAttribute('data-target');
+                        let targetElem = document.getElementsByClassName(routeTarget)[0];
+                        if (targetElem) {
+                            routeContainer.classList.add('hide');
+                            targetElem.classList.remove('hide');
+                        }
+                    } else if (e.target.classList.contains('back-btn')) {
+                        let parent = e.target.parentElement.parentElement;
+                        parent.classList.add('hide');
+                        routeContainer.classList.remove('hide');
+                    }
+                }
+            };
+        }
+
+        window.sleep = function(timeout) {
+            return new Promise((resolve) => setTimeout(resolve, timeout));
+        }
+
+        function showError(parent, msg) {
+            let al = parent.querySelector('.alert');
+            al.innerHTML = msg;
+            al.classList.remove('hide');
+        }
+
+        function hideError(parent) {
+            let al = parent.querySelector('.alert');
+            al.classList.add('hide');
+        }
+
+        async function joinBtnHandler(event) {
+            event.target.setAttribute('disabled', true);
+            event.preventDefault();
+
+            let form = document.querySelector('.join-form');
+            hideError(form);
+
+            await sleep(1000);
+            let reset = await Animator.ball(event.target);
+            let fetchOptions = {
+                method : 'POST',
+                redirect : 'follow',
+                credentials : 'same-origin',
+                headers : new Headers({
+                    'Accept': 'application/json, text/plain, */*',
+                    'Content-Type': 'application/json'
+                })
+            };
+ 
+            if (!form.checkValidity()) {
+                showError(form, 'Please fill all input fields');
+                event.target.removeAttribute('disabled');
+                return reset();
+            }
+
+            let [inputControl] = form.elements;
+            let data = Object.assign({}, fetchOptions, {body: JSON.stringify({username: inputControl.value})});
+
+            fetch('/api/users/login', data)
+                .then((response) => {
+                    return response.json();
+                })
+                .then((response) => {
+                    if (response.status.code === 200) {
+                        return Animator.expand(event.target, {
+                            background: '#662080',
+                            finalBackground: 'linear-gradient(-30deg, #2c39dc, #662080)'
+                        })
+                    }
+
+                    return Promise.reject(response.status.error);
+                })
+                .then((response) => {
+                    window.location.href = '/dashboard';
+                })
+                .catch((err) => {
+                    event.target.removeAttribute('disabled');
+                    reset();
+                    showError(form, err.toString());
+                });
+        }
+
+		window.onload = function () {
+            addStepHandlers();
+		}
+	</script>
+</body>
+</html>
