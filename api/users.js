@@ -24,12 +24,21 @@ const removeHandler = function (req, res) {
     const decoded = users.verify(token);
 
     if (decoded.status.code !== 200) {
-        return res.json(decoded);
+        req.session.destroy();
+        return res.redirect('/');
     }
 
     const username = decoded.result.username;
-    const response = users.remove(token);
-    
+
+    if (req.session.roomId) {
+        const subscribedUsers = rooms.destroy(req.session.roomId, username);
+        if (subscribedUsers instanceof Array) {
+            subscribedUsers.forEach((user) => users.deleteRoom(req.session.roomId, user));
+            req.io.emit('room_removed', req.session.roomId);
+        }
+    }
+
+    const response = users.remove(token);    
     if (typeof response == 'string') {
         return res.json({status: {code: 500, error: response.toString()}});
     }
@@ -37,7 +46,8 @@ const removeHandler = function (req, res) {
     if (response instanceof Array) {
         response.forEach((room) => {
             rooms.remove(room, username);
-        })
+            req.io.emit('room_removed', room);
+        });
     }
 
     req.session.destroy();
@@ -70,7 +80,11 @@ router.post('/fetch', function (req, res) {
         return res.json({status: {code: 401, error: 'The supplied user does not exists'}});
     }
 
-    response = users.getRooms(response.result.username);
+    if (req.session.roomId) {
+        return res.json({status: {code : 405, error: 'Cannot access other rooms while hosting.'}});
+    }
+
+    response = users.getRooms(req.session.token);
     if (typeof response === 'string') {
         return res.json({status: {code: 401, error: response}});
     }

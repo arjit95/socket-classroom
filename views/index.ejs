@@ -14,13 +14,13 @@
 			</div>
 		</div>
 
-        <form class="create-container hide">
+        <form class="create-container create-form hide">
             <div class="container">
                 <div class="alert hide"></div>
                 <p>Create a new server</p>
                 <input type="text" name="username" placeholder="Username" required/>
                 <input type="text" name="serverName" placeholder="Server Name" required/>
-                <input type="button" value="Create"/>
+                <input type="button" value="Create" onclick="createBtnHandler(event)"/>
                 <input type="button" value="Go Back" class="back-btn"/>
             </div>
         </form>
@@ -28,7 +28,7 @@
         <form class="join-container join-form hide" action="/api/users/login">
 			<div class="container">
                 <div class="alert hide"></div>
-				<p>Login to classroom</p>
+				<p>Login to Classroom</p>
 				<input type="text" name="username" placeholder="Username" required/>
 				<input type="button" value="Join" onclick="joinBtnHandler(event)"/>
 				<input type="button" value="Go Back" class="back-btn"/>
@@ -76,6 +76,65 @@
             al.classList.add('hide');
         }
 
+        let fetchOptions = {
+            method : 'POST',
+            redirect : 'follow',
+            credentials : 'same-origin',
+            headers : new Headers({
+                'Accept': 'application/json, text/plain, */*',
+                'Content-Type': 'application/json'
+            })
+        };
+
+        async function createBtnHandler(event) {
+            event.target.setAttribute('disabled', true);
+            event.preventDefault();
+
+            let form = document.querySelector('.create-form');
+            hideError(form);
+
+            await sleep(1000);
+            let reset = await Animator.ball(event.target);
+
+            if (!form.checkValidity()) {
+                showError(form, 'Please fill all input fields');
+                event.target.removeAttribute('disabled');
+                return reset();
+            }
+
+            let inputControl = form.elements;
+            inputControl = Array.prototype.slice.call(inputControl).filter((i) => ['username', 'serverName'].includes(i.getAttribute('name')));
+            let data = Object.assign({}, fetchOptions, {
+                body: JSON.stringify({
+                    username: inputControl[0].value
+                })
+            });
+
+            fetch('api/users/login', data)
+                .then((response) => response.json())
+                .then((response) => {
+                    if (response.status.code === 200) {
+                        data.body = JSON.stringify({roomId: inputControl[1].value})
+                        return fetch('/api/rooms/create', data);
+                    }
+
+                    return Promise.reject(response.status.error);
+                })
+                .then((response) => response.json())
+                .then((response) => {
+                    if (response.status.code !== 200) {
+                        return Promise.reject(response.status.error);
+                    }
+
+                    window.location.href = '/dashboard';
+                })
+                .catch((err) => {
+                    event.target.removeAttribute('disabled');
+                    reset();
+                    showError(form, err.toString());
+                })
+        }
+
         async function joinBtnHandler(event) {
             event.target.setAttribute('disabled', true);
             event.preventDefault();
@@ -85,15 +144,6 @@
 
             await sleep(1000);
             let reset = await Animator.ball(event.target);
-            let fetchOptions = {
-                method : 'POST',
-                redirect : 'follow',
-                credentials : 'same-origin',
-                headers : new Headers({
-                    'Accept': 'application/json, text/plain, */*',
-                    'Content-Type': 'application/json'
-                })
-            };
  
             if (!form.checkValidity()) {
                 showError(form, 'Please fill all input fields');

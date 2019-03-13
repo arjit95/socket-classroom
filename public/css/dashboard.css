@@ -56,6 +56,12 @@ body {
     overflow: hidden;
 }
 
+.list > p {
+    font-size: 13px;
+    white-space: normal;
+    padding-left: 6px;
+}
+
 .list li,
 .room-heading {
     padding: 6px;

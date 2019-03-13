@@ -1,4 +1,5 @@
 {
     "token_secret": "classroom-token-123",
-    "session_secret": "classroom-session-123"
+    "session_secret": "classroom-session-123",
+    "cookie_secret": "classroom-cookie-123"
 }

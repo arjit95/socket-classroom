@@ -40,7 +40,12 @@
 <textarea id="code">
 /**
  * Start by writing some code here..
- * Any changes will be broadcasted to all connected users
+ * Any changes will be broadcasted to all connected users.
+<% if (!roomId) { %>
+ * As you are not hosting a room, so
+ * you won't be able to edit the contents
+ * of this file.
+<% } %>
 **/
 </textarea>
         </div>
@@ -50,9 +55,6 @@
 
                 <h4 class="room-heading">Online</h4>
                 <ul class="list">
-                    <li><a href="#">User 1</a></li>
-                    <li><a href="#">User 2</a></li>
-                    <li><a href="#">User 3</a></li>
                 </ul>
             </div>
         </div>
@@ -61,8 +63,9 @@
     <script type="text/javascript" src="/static/js/javascript.js"></script>
     <script type="text/javascript" src="/static/js/show-hint.js"></script>
     <script type="text/javascript" src="/static/js/javascript-hint.js"></script>
+    <script type="text/javascript" src="/static/js/socket.io.js"></script>
     <script>
-        let editor = CodeMirror.fromTextArea(document.getElementById('code'), {
+        let options = {
             lineNumbers: true,
             styleActiveLine: true,
             matchBrackets: true,
@@ -71,11 +74,214 @@
             lineWrapping: true,
             extraKeys: {"Ctrl-Space": "autocomplete"},
             pollInterval: 1000
+        };
+
+        <% if(!roomId) { %>
+            options.readOnly = true;
+        <% } %> 
+
+        let editor = CodeMirror.fromTextArea(document.getElementById('code'), options);
+
+        function renderList(parent, users) {
+            parent.innerHTML = '';
+
+            users.forEach((user) => {
+                let template = `<li><a href="#">${user}</a></li>`;
+                parent.insertAdjacentHTML('beforeend', template);
+            });
+        }
+
+        async function getResponse(url, data = {}) {
+            let fetchOptions = {
+                method : 'POST',
+                redirect : 'follow',
+                credentials : 'same-origin',
+                headers : new Headers({
+                    'Accept': 'application/json, text/plain, */*',
+                    'Content-Type': 'application/json'
+                })
+            };
+
+            let request = Object.assign({}, fetchOptions, {body: JSON.stringify(data)});            
+            let response = await fetch(url, request);
+            response = await response.json();
+            return response;
+        }
+
+        // Get rooms joined by user
+        async function renderJoinedRooms() {
+            let parent = document.querySelector('.joined-rooms ul.list');
+
+            try {
+                renderList(parent, []);
+                let response = await getResponse('/api/users/fetch');
+                if (response.status.code !== 200) {
+                    throw new Error(response.status.error);
+                }
+
+                renderList(parent, response.result);
+            } catch (err) {
+                console.log(`Error while fetching joined rooms by user: ${err}`);
+                parent.innerHTML = `<p>${err}</p>`;
+            }
+        }
+
+         // Get all rooms
+        async function renderAvailableRooms() {
+            let parent = document.querySelector('.available-rooms ul.list');
+            try {
+                renderList(parent, []);
+                let response = await getResponse('/api/rooms/available');
+                if (response.status.code !== 200) {
+                    throw new Error(response.status.error);
+                }
+
+                renderList(parent, response.result);
+            } catch (err) {
+                console.log(`Error while fetching available rooms for user: ${err}`);
+                parent.innerHTML = `<p>${err}</p>`;
+            }
+        }
+
+         // Get all online users for room
+        async function renderOnlineUsers(roomId) {
+            let parent = document.querySelector('.available-users ul.list');
+            renderList(parent, []);
+
+            if (!roomId) {
+                return;
+            }
+
+            try {                
+                let response = await getResponse('/api/rooms/users', {roomId: roomId});
+                if (response.status.code !== 200) {
+                    throw new Error(response.status.error);
+                }
+
+                renderList(parent, response.result);
+            } catch (err) {
+                console.log(`Error while fetching online users for room: ${err}`);
+                parent.innerHTML = `<p>${err}</p>`;
+            }
+        }
+
+        const url = `${window.location.protocol}//${window.location.host}`;
+        const subscribed = [];
+
+        const socket = io(`${url}`, {
+            'reconnection': true,
+            'reconnectionDelay': 1000,
+            'reconnectionDelayMax' : 5000,
+            'reconnectionAttempts': 5
         });
 
-        editor.on('changes', function(a, b, c) {
-            a.getValue();
-        })
+        function updateBuffer(payload) {
+            editor.getDoc().setValue(payload.doc);
+        }
+
+        async function subscribeToRoom(roomId) {
+            if (subscribed.includes(roomId)) {
+                renderOnlineUsers(roomId);
+                return socket.emit(roomId, {command: 'request'}); // update buffer
+            }
+
+            try {
+                const response = await getResponse('/api/rooms/add', {roomId: roomId});
+                if (response.status.code >= 300) {
+                    throw new Error(response.status.error);
+                }
+            } catch (err) {
+                console.log(err);
+                return;
+            }
+
+            socket.on(roomId, function (payload) {
+                switch(payload.command) {
+                    case 'update':
+                        updateBuffer(payload);
+                        break;
+                    case 'refresh':
+                        renderJoinedRooms();
+                        renderAvailableRooms();
+                        renderOnlineUsers(roomId);
+                        break;
+                }
+            });
+
+            socket.emit('subscribe', roomId);
+            socket.emit(roomId, {command: 'request'}); // update buffer
+            subscribed.push(roomId);
+        }
+
+        function attachEventHandlers() {
+            const availElem = document.querySelector('.available-rooms ul.list');
+            const joinedElem = document.querySelector('.joined-rooms ul.list');
+            const onClick = (event) => {
+                event.preventDefault();
+
+                if (event.target.tagName === 'LI' || event.target.tagName == 'A') {
+                    let roomId = event.target.innerText;
+                    if (roomId) {
+                        subscribeToRoom(roomId);
+                    }
+                }
+            };
+
+            availElem.onclick = onClick;
+            joinedElem.onclick = onClick;
+            socket.on('room_added', renderAvailableRooms);
+            socket.on('room_removed', function (roomId) {
+                let idx = subscribed.indexOf(roomId);
+                if (idx >= 0) {
+                    renderAvailableRooms();
+                    renderJoinedRooms();
+                    renderOnlineUsers();
+
+                    subscribed.splice(idx, 1);
+                }
+            });
+        }
+
+        attachEventHandlers();
+
+        <% if (roomId) { %>
+        function broadcastFromRoom(roomId) {
+            let changeHandler = function(a, b, c) {
+                clearTimeout(changeHandler);
+                setTimeout(function () {
+                    let value = a.getValue();
+                    socket.emit(roomId, {
+                        command: 'update',
+                        doc: value
+                    });
+                }, 2000);
+            };
+
+            editor.on('changes', changeHandler);
+            socket.on(roomId, function (payload) {
+                switch(payload.command) {
+                    case 'request':
+                        socket.emit(roomId, {command: 'update', doc: editor.getValue()})
+                        break;
+                    case 'refresh':
+                        renderJoinedRooms();
+                        renderAvailableRooms();
+                        renderOnlineUsers(roomId);
+                        break;
+                }
+            });
+
+            socket.emit('subscribe', roomId);
+        }
+
+        let roomId = '<%= roomId %>';
+
+        broadcastFromRoom(roomId);
+        renderOnlineUsers(roomId);
+        <% } else { %>
+        renderJoinedRooms();
+        renderAvailableRooms();
+        <% } %>
     </script>
 </body>
 </html>

@@ -23,21 +23,22 @@ router.post('/create', function (req, res) {
     }
 
     const username = response.result.username;
-    rooms.create(username, roomId);
+    rooms.create(roomId, username);
     response = users.addRoom(req.session.token, roomId);
 
     if (typeof response === 'string') {
         return res.json({status: {code: 500, error: response}});
     }
 
+    req.session.roomId = roomId;
+    req.session.save();
+
+    req.io.emit('room_added', roomId);
     res.json({status: {code: 200}});
 });
 
 router.post('/add', function (req, res) {
     const roomId = req.body.roomId;
-    if (rooms.exists(roomId)) {
-        return res.json({status: {code: 500, error: 'Room id already present.'}});
-    }
 
     let response = users.verify(req.session.token);
     if (response.status.code !== 200) {
@@ -45,7 +46,7 @@ router.post('/add', function (req, res) {
     }
 
     const username = response.result.username;
-    response = rooms.add(username, roomId);
+    response = rooms.add(roomId, username);
     if (response.status.code !== 200) {
         return res.json(response);
     }
@@ -56,6 +57,7 @@ router.post('/add', function (req, res) {
         return res.json({status: {code: 500, error: response}});
     }
 
+    req.io.emit(roomId, {command: 'refresh'});
     res.json({status: {code: 200}});
 });
 
@@ -78,12 +80,12 @@ router.post('/remove', function (req, res) {
         return res.json({status: {code: 500, error: response}});
     }
 
-    response.forEach(user => users.deleteRoom(user, roomId));
+    response.forEach(user => users.deleteRoom(roomId, username));
     res.json({status: {code: 200}});
 });
 
 
-router.post('/fetch/users', function (req, res) {
+router.post('/users', function (req, res) {
     const roomId = req.body.roomId;
     if (!rooms.exists(roomId)) {
         return res.json({status: {code: 500, error: 'Room does not exists.'}});
@@ -102,13 +104,21 @@ router.post('/fetch/users', function (req, res) {
     res.json({status: {code: 200}, result: response});
 });
 
-router.post('/fetch/rooms/all', function () {
+router.post('/available', function (req, res) {
     let response = users.verify(req.session.token);
     if (response.status.code !== 200) {
         return res.json(response);
     }
 
-    return res.json({status: {code: 200}, result: rooms.fetchRooms()});
+    if (req.session.roomId) {
+        return res.json({status: {code : 405, error: 'Cannot access other rooms while hosting.'}});
+    }
+
+    let availableRooms = rooms.fetchRooms();
+    const joinedRooms = users.getRooms(req.session.token);
+    availableRooms = availableRooms.filter((room) => !joinedRooms.includes(room));
+
+    return res.json({status: {code: 200}, result: availableRooms});
 });
 
 module.exports = router;
