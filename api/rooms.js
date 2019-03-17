@@ -10,7 +10,8 @@ router.use(function (req, res, next) {
     }
 
     next();
-})
+});
+
 router.post('/create', function (req, res) {
     const roomId = req.body.roomId;
     if (rooms.exists(roomId)) {
@@ -60,30 +61,6 @@ router.post('/add', function (req, res) {
     req.io.emit(roomId, {command: 'refresh'});
     res.json({status: {code: 200}});
 });
-
-
-router.post('/remove', function (req, res) {
-    const roomId = req.body.roomId;
-    if (!rooms.exists(roomId)) {
-        return res.json({status: {code: 500, error: 'Room does not exists.'}});
-    }
-
-    let response = users.verify(req.session.token);
-    if (response.status.code !== 200) {
-        return res.json(response);
-    }
-
-    const username = response.result.username;
-    response = rooms.destroy(roomId, username);
-
-    if (typeof response == 'string') {
-        return res.json({status: {code: 500, error: response}});
-    }
-
-    response.forEach(user => users.deleteRoom(roomId, username));
-    res.json({status: {code: 200}});
-});
-
 
 router.post('/users', function (req, res) {
     const roomId = req.body.roomId;

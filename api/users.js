@@ -65,7 +65,7 @@ router.post('/remove', function (req, res, next) {
 router.post('/remove', removeHandler);
 router.get('/logout', removeHandler);
 
-
+// Fetches the Available rooms for the user..
 router.post('/fetch', function (req, res) {
     if (!req.session.token) {
         return res.json({status: {code: 401, error: 'Please supply authentication token'}});
