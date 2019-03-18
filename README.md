@@ -16,3 +16,5 @@ A simple classroom like implementation in node.js
 ### Hosting a class
 - Just enter a username and the name of the class. `Note: While hosting you cannot join any other rooms.`
 
+### Security
+- Respective token/session/cookie are defined in config.json. Change them according to your requirements.
